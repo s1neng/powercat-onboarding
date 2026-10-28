@@ -50,9 +50,12 @@
       '<p class="small muted">출처: ' + esc(st.source) + '. 판매수입은 전기요금 합계, 고객호수는 계약 호수입니다.</p>';
   }
 
-  // 내가 등록한 장소는 지도 위치가 없으면 고른 시군 중심에 핀
-  const placesOf = state => D.placesFor(state.user.hq).concat(state.region.places.map(x =>
-    Object.assign({ mine: true, author: state.user.nickname }, x, { ll: x.ll || (x.area && areasOf(state.user.hq)[x.area]) || null })));
+  // 직접 등록한 장소: Supabase가 켜져 있으면 본부 동료 전체 것, 아니면 이 브라우저에 저장한 내 것만.
+  // 지도 위치가 없으면 시군 중심에 핀.
+  const placesOf = state => {
+    const C = OB.cloud, list = C && C.on ? C.places : state.region.places.map(x => Object.assign({ mine: true, author: state.user.nickname }, x));
+    return D.placesFor(state.user.hq).concat(list.map(x => Object.assign({}, x, { ll: x.ll || (x.area && areasOf(state.user.hq)[x.area]) || null })));
+  };
 
   // ---------- 지도 (Leaflet + OpenStreetMap, 인터넷 필요) ----------
   const KOREA = [36.4, 127.8];
@@ -124,16 +127,21 @@
   }
 
   // ---------- 이름으로 장소 찾기 ----------
-  // 1순위: 카카오 로컬 키워드 검색 (실행.bat 로컬 서버가 중계, 키는 PC에만 저장)
+  // 1순위: 카카오 로컬 키워드 검색 — 웹에서는 Supabase Edge Function, 로컬에서는 실행.bat 서버가 중계 (키는 어디에도 노출 안 됨)
   // 2순위: OpenStreetMap 이름 검색 (키 없음·결과가 적음)
-  async function searchKakao(q) {
+  async function kakaoRaw(q) {
+    if (OB.cloud && OB.cloud.on) return OB.cloud.searchKakao(q);
     if (!/^https?:$/.test(location.protocol)) return { error: 'noserver' };
     let r;
     try { r = await fetch('api/place-search?q=' + encodeURIComponent(q)); } catch (e) { return { error: 'noserver' }; }
     // 중계 없는 서버(예: 웹에 올린 버전)는 404나 HTML을 돌려주므로 JSON이 아니면 대체 검색으로
     if (r.status === 404 || !/json/.test(r.headers.get('content-type') || '')) return { error: 'noserver' };
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) return { error: j.error || 'upstream' };
+    return r.ok ? j : { error: j.error || 'upstream' };
+  }
+  async function searchKakao(q) {
+    const j = await kakaoRaw(q);
+    if (j.error) return j;
     return { src: 'kakao', items: (j.documents || []).map(x => ({
       name: x.place_name, cat: String(x.category_name || '').split('>').pop().trim(),
       addr: x.road_address_name || x.address_name, area: x.address_name,
@@ -286,8 +294,14 @@
         if (ll && t !== 'trait') p.ll = ll;
         ui().type = t;
         OB.app.closeModal();
-        OB.app.update(st => st.region.places.push(p));
-        OB.app.toast(D.PLACE_TYPES[t].label + '을(를) 등록했어요. 본부 동료들에게 공유됩니다');
+        const done = shared => {
+          OB.app.update(st => st.region.places.push(p)); // 이수율 계산용으로 내 브라우저에도 기록
+          OB.app.toast(D.PLACE_TYPES[t].label + '을(를) 등록했어요.' + (shared ? ' 본부 동료들에게 공유됩니다' : ''));
+        };
+        if (OB.cloud && OB.cloud.on) {
+          OB.cloud.addPlace(u.hq, p, u.nickname).then(x => { p.id = x.id; done(true); })
+            .catch(err => { OB.app.toast('공유 저장에 실패해 내 브라우저에만 저장했어요 (' + err.message + ')'); OB.app.update(st => st.region.places.push(p)); });
+        } else done(false);
       });
     });
   }
@@ -349,7 +363,7 @@
     }
     function placesCard() { return '' +
         '<article class="card span12">' +
-          '<div class="card-head"><h2>우리 지역 알려주기</h2><button class="btn primary sm" data-act="add-place">＋ 등록</button></div>' +
+          '<div class="card-head"><h2>우리 지역 알려주기 ' + (OB.cloud && OB.cloud.on ? '<span class="badge live">본부 공유</span>' : '<span class="badge" title="Supabase가 연결되지 않아 이 브라우저에만 저장돼요">내 브라우저에만 저장</span>') + '</h2><button class="btn primary sm" data-act="add-place">＋ 등록</button></div>' +
           '<div class="tabs">' + Object.keys(D.PLACE_TYPES).map(k => '<button class="' + (s.type === k ? 'on' : '') + '" data-type="' + k + '">' + D.PLACE_TYPES[k].icon + ' ' + D.PLACE_TYPES[k].label + (items.find(i => i.id === k).done ? ' ✓' : '') + '</button>').join('') + '</div>' +
           // 지역특성은 장소가 아니라서 지도 없이 목록만
           (s.type === 'trait' ? '<div class="places-body no-map"><div class="places-list">' :
@@ -402,7 +416,11 @@
       else if ((b = e.target.closest('[data-focus]'))) focusPin(b.dataset.focus);
       else if ((b = e.target.closest('[data-metric]'))) { s.metric = b.dataset.metric; OB.app.render(); }
       else if ((b = e.target.closest('[data-type]'))) { s.type = b.dataset.type; OB.app.render(); }
-      else if ((b = e.target.closest('[data-del]'))) OB.app.update(st => { st.region.places = st.region.places.filter(x => x.id !== b.dataset.del); });
+      else if ((b = e.target.closest('[data-del]'))) {
+        const id = b.dataset.del, drop = () => OB.app.update(st => { st.region.places = st.region.places.filter(x => x.id !== id); });
+        if (OB.cloud && OB.cloud.on) OB.cloud.deletePlace(id).then(drop).catch(err => OB.app.toast('삭제하지 못했어요 (' + err.message + ')'));
+        else drop();
+      }
       // 목록 항목을 누르면 지도에서 그 핀으로 이동
       else if ((b = e.target.closest('[data-pin]'))) focusPin(b.dataset.pin);
       else if ((b = e.target.closest('[data-quiz]'))) {
@@ -415,6 +433,9 @@
       }
     });
     if (s.open === 'places') pm = placeMap(root, OB.app.state, s.type);
+    // Supabase가 설정돼 있으면 처음 한 번 본부 공유 목록을 받아 다시 그림
+    const C = OB.cloud, hq = OB.app.state.user.hq;
+    if (C && !C.loadedFor(hq)) C.ready().then(on => on ? C.loadPlaces(hq) : null).then(r => { if (r && OB.app.lastRoute === 'region') OB.app.render(); });
   }
 
   OB.views.region = { render, mount };
