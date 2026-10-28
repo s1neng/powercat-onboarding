@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>파워캣 온보딩</title>
+  <link rel="icon" href="assets/powercat-hello.png">
+  <!-- 정보입력 화면의 둥근 글꼴 (인터넷이 막혀 있으면 맑은 고딕으로 표시) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+  <!-- 지역 지도 (Leaflet 1.9.4 + OpenStreetMap 타일, 인터넷이 막혀 있으면 지도만 숨김). 스타일은 프로젝트에 포함 -->
+  <link rel="stylesheet" href="css/leaflet.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="modal"></dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/region-data.js"></script>
+  <script src="js/region-geo.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/views/intro.js"></script>
+  <script src="js/views/home.js"></script>
+  <script src="js/views/work.js"></script>
+  <script src="js/views/edu.js"></script>
+  <script src="js/views/region-traits.js"></script>
+  <script src="js/views/region-quiz.js"></script>
+  <script src="js/views/region.js"></script>
+  <script src="js/views/graduate.js"></script>
+  <script src="js/views/admin.js"></script>
+</body>
+</html>

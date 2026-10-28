@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>온보딩 v3 로직 테스트</title>
+  <style>
+    body { font-family: "Malgun Gothic", sans-serif; margin: 24px; background: #fff; color: #1b2333; }
+    li.pass { color: #0f7a50; } li.fail { color: #d93b3b; font-weight: 700; }
+    pre { background: #f5f5f5; padding: 6px; }
+  </style>
+</head>
+<body>
+  <h1>온보딩 v3 로직 테스트</h1>
+  <p id="summary"></p>
+  <ul id="out"></ul>
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/ai.js"></script>
+  <script>
+    const K = OB.core, results = [];
+    function test(name, fn) {
+      try { fn(); results.push([name, true]); } catch (e) { results.push([name, false, e.message]); }
+    }
+    function eq(a, b) { const A = JSON.stringify(a), B = JSON.stringify(b); if (A !== B) throw new Error('기대 ' + B + ' / 실제 ' + A); }
+    function user(over) {
+      const s = K.defaultState();
+      s.user = Object.assign({ empId: '20260999', name: '홍길동', job: '배전', hq: '경기본부', startDate: '2026-10-01', nickname: '홍길동' }, over);
+      return s;
+    }
+
+    test('날짜 더하기·차이', () => { eq(K.addDays('2026-12-30', 3), '2027-01-02'); eq(K.diffDays('2026-10-01', '2026-12-30'), 90); });
+    test('잘못된 날짜 거르기', () => { eq(K.isValidISO('2026-02-30'), false); eq(K.isValidISO('2026-02-28'), true); });
+    test('HTML 이스케이프', () => eq(K.esc('<img onerror="x">'), '&lt;img onerror=&quot;x&quot;&gt;'));
+
+    test('D-day: 기본 90일', () => {
+      const d = K.dday(user(), '2026-10-22');
+      eq([d.period, d.target, d.left, d.elapsed], [90, '2026-12-30', 69, 21]);
+    });
+    test('D-day: 관리자 개인별 기간', () => {
+      const s = user(); s.periods['20260999'] = 30;
+      const d = K.dday(s, '2026-11-05');
+      eq([d.target, d.left, K.ddayLabel(d.left)], ['2026-10-31', -5, 'D+5']);
+    });
+
+    test('이수율: 처음은 0%', () => eq(K.progress(user(), '2026-10-22').overall, 0));
+    test('이수율: 가중치 40/40/20', () => {
+      const s = user();
+      K.workItems(s).filter(i => i.kind === '인수인계').forEach(i => s.work.handover[i.id.slice(3)] = true);
+      s.events.push({ id: 'e', date: '2026-10-22', time: '', title: 'x' });
+      s.work.verified = true; s.work.drafted = true; s.work.connected = ['p6'];
+      const p = K.progress(s, '2026-10-22');
+      eq([p.work, p.edu, p.region, Math.round(p.overall * 100)], [1, 0, 0, 40]);
+    });
+    test('교육 이수율은 시간 기준', () => {
+      const s = user(); s.edu.done.job1 = '2026-10-10'; // 직무 8h / 전체 19h
+      eq(Math.round(K.progress(s, '2026-10-22').edu * 1000), Math.round(8 / 19 * 1000));
+    });
+    test('교육 알림: 마감 7일 이내 미이수', () => {
+      const cs = K.courses(user(), '2026-10-10'); // 14일 마감 과정 = 10-15, 5일 남음
+      eq(cs.filter(c => c.alert).map(c => c.id), ['law1', 'law2']);
+    });
+    test('지역: 지표+3종 등록 시 100%', () => {
+      const s = user(); s.region.statsChecked = true;
+      ['food', 'tour', 'trait'].forEach(t => s.region.places.push({ id: t, type: t, name: 'a', desc: 'b' }));
+      eq(K.progress(s).region, 1);
+    });
+    test('지역: 비교 데이터 있는 본부는 특징 확인까지 5개', () => {
+      OB.regionData = { hq: '충북본부', metro: '충청북도', metros: [{}, {}, {}] };
+      const s = user({ hq: '충북본부' }); s.region.statsChecked = true;
+      ['food', 'tour', 'trait'].forEach(t => s.region.places.push({ id: t, type: t }));
+      const before = [K.regionItems(s)[0].label, K.progress(s).region];
+      s.region.traitsChecked = true;
+      const after = K.progress(s).region;
+      delete OB.regionData;
+      eq([before, after, K.regionItems(user()).length], [['충북본부 특징 확인하기', 0.8], 1, 4]);
+    });
+    test('졸업 조건: 모두 완료', () => {
+      const s = user();
+      K.workItems(s).filter(i => i.kind === '인수인계').forEach(i => s.work.handover[i.id.slice(3)] = true);
+      s.events.push({ id: 'e', date: '2026-10-22', title: 'x' }); s.work.verified = s.work.drafted = true; s.work.connected = ['p6'];
+      K.courses(s).forEach(c => s.edu.done[c.id] = '2026-10-20');
+      s.region.statsChecked = true;
+      ['food', 'tour', 'trait'].forEach(t => s.region.places.push({ id: t, type: t }));
+      const p = K.progress(s);
+      eq([p.complete, K.pct(p.overall)], [true, 100]);
+    });
+    test('99.99%는 100으로 보이지 않음', () => eq(K.pct(0.99999), 99));
+
+    test('일정 추출: 제목+일시', () => {
+      eq(K.parseSchedule('제목: 11월 부서 회의\n일시: 2026년 11월 3일(화) 오후 2시\n장소: 3층', '2026-10-22'),
+        [{ date: '2026-11-03', time: '14:00', title: '11월 부서 회의' }]);
+    });
+    test('일정 추출: 줄 안의 제목과 연도 없는 날짜', () => {
+      eq(K.parseSchedule('회의 자료 제출: 10월 23일까지', '2026-10-22'), [{ date: '2026-10-23', time: '', title: '회의 자료 제출' }]);
+    });
+    test('일정 추출: 점 표기·24시간', () => {
+      eq(K.parseSchedule('2026.11.05 09:30 안전교육', '2026-10-22'), [{ date: '2026-11-05', time: '09:30', title: '안전교육' }]);
+    });
+    test('일정 추출: 내일 / 다음 주 수요일 / 반', () => {
+      eq(K.parseSchedule('내일 오전 10시 반 팀 회의\n다음 주 수요일 현장 점검', '2026-10-22'), [
+        { date: '2026-10-23', time: '10:30', title: '팀 회의' },
+        { date: '2026-10-28', time: '', title: '현장 점검' }]);
+    });
+    test('일정 추출: 연말에 받은 1월 날짜는 내년', () => {
+      eq(K.parseSchedule('1월 5일 시무식', '2026-12-20')[0].date, '2027-01-05');
+    });
+    test('일정 추출: 날짜 없으면 빈 목록', () => eq(K.parseSchedule('안녕하세요 잘 부탁드립니다', '2026-10-22'), []));
+
+    test('업무검증: 키워드로 조항 찾기', () => {
+      const r = OB.ai.verifyLocal('협력업체와 식사 후 물품 구매 견적');
+      eq(r.map(x => x.id).sort(), ['r2', 'r9']);
+    });
+    test('공문 초안 서식', () => {
+      const t = OB.ai.draftLocal({ kind: 'doc', purpose: '자료 제출 요청', to: '각 지사장', topic: '안전점검 결과 제출', points: '기한: 11월 10일' }, { hq: '경기본부', job: '배전', name: '홍길동' });
+      if (!/수신  각 지사장/.test(t) || !/가\. 기한: 11월 10일/.test(t) || !/끝\.$/.test(t)) throw new Error(t);
+    });
+    test('AI 추천: 60일 이내·중복 없음', () => {
+      const s = user(); const r = OB.ai.recommend(s);
+      const today = K.todayISO();
+      if (!r.length) throw new Error('추천 없음');
+      r.forEach(x => { if (x.date < today || x.date > K.addDays(today, 60)) throw new Error(x.date); });
+    });
+    test('손상된 저장값은 초기화', () => {
+      localStorage.setItem(OB.config.STORAGE_KEY + '-test', '{');
+      const keep = OB.config.STORAGE_KEY; OB.config.STORAGE_KEY = keep + '-test';
+      const s = K.load(); OB.config.STORAGE_KEY = keep; localStorage.removeItem(keep + '-test');
+      eq(s.user, null);
+    });
+
+    const pass = results.filter(r => r[1]).length;
+    document.getElementById('summary').textContent = '통과 ' + pass + ' / ' + results.length;
+    document.getElementById('out').innerHTML = results.map(r => '<li class="' + (r[1] ? 'pass' : 'fail') + '">' + (r[1] ? '✔ ' : '✘ ') + K.esc(r[0]) + (r[2] ? '<pre>' + K.esc(r[2]) + '</pre>' : '') + '</li>').join('');
+    window.TEST_RESULT = { pass, total: results.length };
+  </script>
+</body>
+</html>

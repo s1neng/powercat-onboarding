@@ -1,0 +1,11 @@
+# 키·비밀값은 절대 올리지 않음 (키는 %APPDATA%\powercat-onboarding\ 에만 저장)
+*key*.txt
+*.env
+.env*
+
+# 작업용 시안·임시 파일
+_preview/
+*.zip
+*.log
+Thumbs.db
+desktop.ini
