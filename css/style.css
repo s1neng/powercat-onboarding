@@ -292,12 +292,12 @@ label > input, label > select, label > textarea { margin-top: 4px; color: var(--
 .month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .dow { text-align: center; font-size: .78rem; color: var(--muted); padding: 6px 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #fafbfd; }
 .dow.sun { color: var(--red); } .dow.sat { color: var(--blue); }
-.day { min-height: 92px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; min-width: 0; }
+.day { min-height: 124px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; min-width: 0; }
 .day:hover { background: #f7f9fd; }
 .day.out { background: #fafbfc; } .day.out .dnum { color: #b4bccb; }
 .dnum { font-size: .78rem; font-weight: 600; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; }
 .day.today .dnum, .wday.today .wday-head b { background: var(--blue); color: #fff; }
-.ev { display: block; font-size: .72rem; padding: 2px 6px; border-radius: 5px; background: #e8f0ff; color: #1f4fae; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.ev { display: block; font-size: .78rem; padding: 2px 6px; border-radius: 5px; background: #e8f0ff; color: #1f4fae; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .ev em { font-style: normal; font-weight: 700; margin-right: 3px; }
 .ev.edu { background: #e3f6ec; color: #0f7a50; } .ev.goal { background: var(--yellow-soft); color: #8a6100; font-weight: 700; }
 .more { font-size: .7rem; color: var(--muted); padding-left: 4px; }
@@ -618,3 +618,74 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* ===== 업무: 공문 기반 AI 추천 일정 (팀 Drive 20261029_SEW_AI추천일정모듈) ===== */
+/* AI 추천 — 사전 생성 결과 안내 */
+.rec-note { margin: 8px 0; padding: 9px 12px; border-radius: 8px; background: #fff7e0; border: 1px solid #f1deaa; font-size: .88rem; }
+.badge.demo { background: #ffe9a8; color: #6b4e00; }
+.cands .rec-basis { grid-column: 2 / -1; }
+.cands .rec-basis summary { cursor: pointer; }
+.cands .rec-basis ul { margin: 4px 0 0 18px; padding: 0; }
+
+/* 캘린더 + AI 추천 패널 */
+.page-work { max-width: 1480px; }
+.cal-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; margin-top: 10px; }
+.cal-main { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.legend { flex-wrap: wrap; }
+.ev.ai { background: #ece6ff; color: #4b32a8; }
+.ev.ghost { background: transparent; color: #5b3fc4; border: 1px dashed #8d75e6; }
+.rec-panel { background: #f8f6ff; border: 1px solid #e2dbfa; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; max-height: 760px; overflow-y: auto; position: sticky; top: 12px; }
+.rec-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rec-head h3 { margin: 0; font-size: 1.05rem; }
+.rec-note { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fff7e0; border: 1px solid #f1deaa; }
+.rec-note .muted { display: block; margin-top: 2px; }
+.rec-card { background: #fff; border: 1px solid #e6e1f7; border-radius: 12px; padding: 11px 12px; display: flex; flex-direction: column; gap: 6px; transition: box-shadow .3s, border-color .3s; }
+.rec-card.flash { border-color: #8d75e6; box-shadow: 0 0 0 3px #d9cffa; }
+.rec-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rec-title { all: unset; cursor: pointer; font-weight: 700; color: #2d2670; }
+.rec-title:hover { text-decoration: underline; }
+.rec-when { font-size: .82rem; color: #5b3fc4; font-weight: 600; }
+.rec-card p { margin: 0; }
+.rec-basis summary { cursor: pointer; }
+.rec-basis ul { margin: 4px 0 0 16px; padding: 0; }
+@media (max-width: 1100px) { .cal-wrap { grid-template-columns: 1fr; } .rec-panel { position: static; max-height: none; } }
+.day .ev.ai, .day .ev.ghost, .wday .ev.ai, .wday .ev.ghost { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+
+/* 추천 근거 설명 팝업 · 일정 수정 */
+.modal-body h4 { margin: 10px 0 0; font-size: .98rem; }
+.ex-sum { padding: 10px 12px; border-radius: 10px; background: #f3efff; line-height: 1.5; }
+.ex-chart { border: 1px solid #e6e1f7; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: #fcfbff; }
+.ex-axis { display: flex; justify-content: space-between; padding: 0 6%; }
+.ex-row { display: grid; grid-template-columns: 42px 1fr 120px; align-items: center; gap: 8px; }
+.ex-year { font-weight: 700; font-size: .85rem; }
+.ex-track { position: relative; height: 22px; border-radius: 11px; background: #ece8fa; }
+.ex-track.pred { background: #fff1c9; }
+.ex-dot { position: absolute; top: 4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #6a4fd6; box-shadow: 0 0 0 2px #fff; }
+.ex-dot.pred { background: #e0a100; }
+.ex-docs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ex-docs li { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.ex-notes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.ai-box { padding: 10px 12px; border-radius: 10px; background: #f3efff; display: flex; flex-direction: column; gap: 6px; font-size: .9rem; }
+.check { display: flex; align-items: center; gap: 8px; flex-direction: row; }
+.check input { width: auto; }
+.ev.done { text-decoration: line-through; opacity: .55; }
+@media (max-width: 720px) { .ex-row { grid-template-columns: 38px 1fr; } .ex-dates { grid-column: 2; } }
+
+/* 달력 이동 연출 · 주간/연간 보완 */
+@keyframes calNext { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: none; } }
+@keyframes calPrev { from { opacity: 0; transform: translateX(-34px); } to { opacity: 1; transform: none; } }
+@keyframes calZoom { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes titleFade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes dayPulse { 0% { box-shadow: inset 0 0 0 0 rgba(106, 79, 214, 0); background: transparent; } 35% { box-shadow: inset 0 0 0 3px rgba(106, 79, 214, .55); background: #f1ecff; } 100% { box-shadow: inset 0 0 0 0 rgba(106, 79, 214, 0); background: transparent; } }
+.slide-next { animation: calNext .5s cubic-bezier(.2, .7, .2, 1); }
+.slide-prev { animation: calPrev .5s cubic-bezier(.2, .7, .2, 1); }
+.slide-zoom { animation: calZoom .45s ease-out; }
+.title-fade { animation: titleFade .5s ease-out; }
+.pulse { animation: dayPulse 1.6s ease-out .35s 2; }
+.rec-card { cursor: pointer; }
+.rec-card:hover { border-color: #c9bdf2; }
+.wday .ev { white-space: normal; overflow: visible; display: block; -webkit-line-clamp: unset; line-height: 1.3; }
+.wday .ev small { opacity: .75; }
+.mini-grid i.gh { background: #ece6ff; color: #4b32a8; font-weight: 700; outline: 1px dashed #8d75e6; }
+.gtxt { color: #5b3fc4; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .slide-next, .slide-prev, .slide-zoom, .title-fade, .pulse { animation: none; } }

@@ -72,6 +72,30 @@
     return out.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   }
 
+  // WRK-02 (시연용): 공문 DB에서 사전 생성한 추천을 Edge Function으로 읽어온다. 실시간 AI 호출이 아니다.
+  // ?asof=2026-11-06 을 주소에 붙이면 그 날짜 기준 결과를 불러온다(리허설용).
+  // 출처: 팀 Drive 20261029_SEW_AI추천일정모듈 (v1_app_ai.js_추가분.js)
+  const preLive = () => !!C.RECOMMEND_ENDPOINT;
+  async function pre(task, payload) {
+    const res = await fetch(C.RECOMMEND_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + C.RECOMMEND_KEY, apikey: C.RECOMMEND_KEY },
+      body: JSON.stringify({ task, payload })
+    });
+    if (!res.ok) throw new Error('추천 서버 응답 오류 (' + res.status + ')');
+    return res.json();
+  }
+  async function recommendPre(state) {
+    let asof = K.todayISO();
+    try { const q = new URLSearchParams(location.search).get('asof'); if (q && K.isValidISO(q)) asof = q; } catch (e) { /* 주소 없는 환경 */ }
+    const out = await pre('recommend', { persona_key: C.RECOMMEND_PERSONA, job: state.user.job, as_of: asof });
+    out.items = out.items || [];
+    return out;
+  }
+  function sendFeedback(items) { // [{series_id, action}] — 실패해도 화면에는 영향 없음
+    items.forEach(f => pre('feedback', { persona_key: C.RECOMMEND_PERSONA, series_id: f.series_id, action: f.action }).catch(() => {}));
+  }
+
   // WRK-05: 업무검증 (규정·지침·매뉴얼에서 관련 조항 찾기)
   function verifyLocal(text) {
     const q = String(text || '');
@@ -144,5 +168,5 @@
     return { text: draftLocal(p, user), demo: true };
   }
 
-  OB.ai = { live, ocr, recommend, verify, verifyLocal, draft, draftLocal, PURPOSES: Object.keys(PURPOSE) };
+  OB.ai = { live, ocr, recommend, preLive, recommendPre, sendFeedback, verify, verifyLocal, draft, draftLocal, PURPOSES: Object.keys(PURPOSE) };
 })();
