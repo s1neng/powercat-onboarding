@@ -689,3 +689,37 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
 .mini-grid i.gh { background: #ece6ff; color: #4b32a8; font-weight: 700; outline: 1px dashed #8d75e6; }
 .gtxt { color: #5b3fc4; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .slide-next, .slide-prev, .slide-zoom, .title-fade, .pulse { animation: none; } }
+
+/* ===== 업무: 총무방 카톡 시즌 지도 (팀 Drive 20261031_SEW_카톡시즌지도DB화) ===== */
+/* 총무방 대화(카톡 집계) — B 섹션 · C 시즌 지도 카드 · 큰 팝업 */
+.chat-sec { border-top: 1px dashed #cfc6f2; padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.chat-block { display: flex; flex-direction: column; gap: 4px; }
+.chat-label { font-size: .78rem; font-weight: 700; color: #5b3fc4; }
+.chat-item { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 1px; background: #fff; border: 1px solid #e6e1f7; border-radius: 10px; padding: 8px 10px; width: 100%; }
+.chat-item:hover { border-color: #c9bdf2; }
+.chat-item:focus-visible, .linkbtn:focus-visible { outline: 2px solid #6a4fd6; outline-offset: 2px; }
+.linkbtn { all: unset; cursor: pointer; color: #2d2670; font-weight: 600; text-align: left; }
+.linkbtn:hover { text-decoration: underline; }
+.chat-scroll { overflow-x: auto; }
+.chat-scroll.tall { max-height: 62vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+table.cm { border-collapse: separate; border-spacing: 2px; width: 100%; font-size: .78rem; }
+table.cm th { font-weight: 600; color: var(--muted); text-align: center; padding: 1px 0; }
+table.cm th.nm { text-align: left; white-space: nowrap; padding-right: 8px; font-weight: 600; color: var(--text); }
+table.cm th.cur, table.cm th.nr { color: #4b32a8; }
+table.cm th.cur { font-weight: 800; }
+table.cm td { height: 18px; min-width: 16px; border-radius: 3px; background: #f1eefb; }
+table.cm td.l0 { background: #f4f2fa; } table.cm td.l1 { background: #e4dcfb; } table.cm td.l2 { background: #cabdf6; }
+table.cm td.l3 { background: #a995ee; } table.cm td.l4 { background: #8466e0; } table.cm td.l5 { background: #5b3fc4; }
+table.cm td.cur { outline: 1px solid #f5b800; outline-offset: 0; }
+table.cm.big th.yr { border-bottom: 1px solid var(--line); color: var(--text); }
+table.cm.big { min-width: 760px; }
+table.cm.big thead th { position: sticky; background: #fff; z-index: 2; top: 0; }
+table.cm.big thead tr + tr th { top: 20px; }
+table.cm.big th.nm { position: sticky; left: 0; background: #fff; z-index: 1; min-width: 190px; }
+table.cm tr.det td { background: #faf8ff; height: auto; padding: 8px 10px; border-radius: 8px; }
+.chat-note { padding: 9px 12px; border-radius: 8px; background: #fff7e0; border: 1px solid #f1deaa; font-size: .88rem; margin-bottom: 8px; }
+.chat-tabs { margin: 6px 0 10px; }
+.chat-det { margin: 4px 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: .85rem; }
+.chat-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.chat-list li { display: flex; flex-direction: column; gap: 1px; border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; }
+@media (max-width: 720px) { table.cm th.nm { max-width: 120px; white-space: normal; } }

@@ -121,7 +121,7 @@
       '<p class="small">' + esc(it.why || '') + '</p>' +
       '<div class="row gap-s wrap"><button class="btn small primary" data-rec-add="' + esc(it.id) + '">캘린더에 등록</button>' + (it.evidence && it.evidence.length ? '<button class="btn small" data-rec-detail="' + esc(it.id) + '">자세히 보기</button>' : '') + '<button class="btn small ghost" data-rec-ignore="' + esc(it.id) + '">무시</button></div></div>').join('');
     if (r.ignored.length) h += '<button class="btn small ghost" data-rec-reset>무시한 추천 ' + r.ignored.length + '개 다시 보기</button>';
-    return h + '</aside>';
+    return h + (OB.chat ? OB.chat.section(state) : '') + '</aside>';
   }
   const aiSnapshot = it => ({ why: it.why, basis: it.basis || '', range: it.range || null, evidence: it.evidence || [], label: it.label || '예상', series_id: it.series_id || null,
     predicted: it.predicted || it.date, ongoing: !!it.ongoing, support_years: it.support_years || [], n_docs: it.n_docs || 0, avg_lead_days: it.avg_lead_days == null ? null : it.avg_lead_days,
@@ -171,6 +171,7 @@
           '<ul class="checklist">' + ho.map(i => '<li><label><input type="checkbox" data-ho="' + i.id.slice(3) + '"' + (i.done ? ' checked' : '') + '><span>' + esc(i.label) + '</span></label></li>').join('') + '</ul>' +
           '<label class="small muted">인수인계 메모<textarea id="hoMemo" rows="4" placeholder="전임자 연락처, 주의사항 등">' + esc(state.work.memo) + '</textarea></label>' +
         '</article>' +
+        (OB.chat ? OB.chat.card(state) : '') +
         '<article class="card span12 verify">' +
           '<div class="card-head"><h2>업무검증</h2><span class="muted small">규정 · 지침 · 매뉴얼 참고</span></div>' +
           '<textarea id="verifyText" rows="3" placeholder="처리하려는 업무를 적어 주세요. 예) 협력업체와 점심 식사 후 계약 견적 받기">' + esc(s.verifyText) + '</textarea>' +
@@ -405,6 +406,7 @@
   function mount(root, state) {
     const s = ui();
     loadRec(state);
+    if (OB.chat) OB.chat.load(state);
     if (s.anim || s.pulse) {
       const g = root.querySelector('.month, .week, .year');
       if (g && s.anim) g.classList.add('slide-' + s.anim);
@@ -416,6 +418,7 @@
     root.addEventListener('click', async e => {
       const t = e.target;
       let b;
+      if (OB.chat && OB.chat.click(e)) return;
       if ((b = t.closest('[data-ev]'))) { e.stopPropagation(); if (b.dataset.ev.startsWith('rec:')) focusRec(b.dataset.ev.slice(4)); else eventModal(b.dataset.ev); return; }
       if ((b = t.closest('[data-rec-add]'))) { recAdd(b.dataset.recAdd); return; }
       if ((b = t.closest('[data-rec-detail]'))) {

@@ -95,6 +95,22 @@
   function sendFeedback(items) { // [{series_id, action}] — 실패해도 화면에는 영향 없음
     items.forEach(f => pre('feedback', { persona_key: C.RECOMMEND_PERSONA, series_id: f.series_id, action: f.action }).catch(() => {}));
   }
+  // 출처: 팀 Drive 20261031_SEW_카톡시즌지도DB화 (v1_app_ai.js_추가분.js)
+  // 총무방 카톡 집계(사전 집계, 읽기 전용). ?asof=YYYY-MM-DD 를 recommendPre 와 같은 방식으로 따른다.
+  const chatLive = () => !!C.CHAT_ENDPOINT;
+  async function chatSignals() {
+    let asof = K.todayISO();
+    try { const q = new URLSearchParams(location.search).get('asof'); if (q && K.isValidISO(q)) asof = q; } catch (e) { /* 주소 없는 환경 */ }
+    const key = C.CHAT_KEY || C.RECOMMEND_KEY;   // 같은 공개(anon) 키. 공문 추천(RECOMMEND_*)을 아직 붙이지 않은 앱이면 CHAT_KEY 에 넣는다
+    const res = await fetch(C.CHAT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key, apikey: key },
+      body: JSON.stringify({ task: 'signals', payload: { as_of: asof } })
+    });
+    if (!res.ok) throw new Error('총무방 집계 응답 오류 (' + res.status + ')');
+    return res.json();
+  }
+
 
   // WRK-05: 업무검증 (규정·지침·매뉴얼에서 관련 조항 찾기)
   function verifyLocal(text) {
@@ -168,5 +184,5 @@
     return { text: draftLocal(p, user), demo: true };
   }
 
-  OB.ai = { live, ocr, recommend, preLive, recommendPre, sendFeedback, verify, verifyLocal, draft, draftLocal, PURPOSES: Object.keys(PURPOSE) };
+  OB.ai = { live, ocr, recommend, preLive, recommendPre, sendFeedback, chatLive, chatSignals, verify, verifyLocal, draft, draftLocal, PURPOSES: Object.keys(PURPOSE) };
 })();

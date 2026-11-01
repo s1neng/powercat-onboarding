@@ -33,6 +33,11 @@ OB.config = {
   RECOMMEND_PERSONA: 'demo-hire', // 시연 인물(대전세종충남본부 사무(경영지원) 신입)
   RECOMMEND_JOB: '사무(경영지원)',
 
+  // 총무방 카톡 집계(시연용 사전 집계, 읽기 전용). 공문 추천과 별개 함수라 실패해도 추천에는 영향 없음.
+  // CHAT_KEY 를 비워 두면 RECOMMEND_KEY(같은 anon 키)를 쓴다. 출처: 팀 Drive 20261031_SEW_카톡시즌지도DB화
+  CHAT_ENDPOINT: 'https://rfvkrppguehzkxxmojnr.supabase.co/functions/v1/chat-signals',
+  CHAT_KEY: '',
+
   // Supabase (본부 공유 장소 저장 + 카카오 검색 중계). 비어 있으면 브라우저 저장소만 사용.
   // anon 키는 공개용이라 여기 넣어도 됩니다. service_role 키·카카오 키는 절대 넣지 마세요.
   // 연결 보류 중 (프로젝트 완성 후 연결 예정). 연결 방법: supabase/schema.sql 실행 → place-search 함수 배포 → KAKAO_REST_KEY 등록 → 아래 두 값 입력
