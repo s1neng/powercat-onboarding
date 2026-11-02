@@ -15,7 +15,10 @@
   <ul id="out"></ul>
   <script src="js/config.js"></script>
   <script src="js/data.js"></script>
+  <script src="js/edu-recommend.js"></script>
+  <script src="js/edu-data.js"></script>
   <script src="js/core.js"></script>
+  <script src="js/edu-core.js"></script>
   <script src="js/ai.js"></script>
   <script>
     const K = OB.core, results = [];
@@ -43,18 +46,36 @@
       eq([d.target, d.left, K.ddayLabel(d.left)], ['2026-10-31', -5, 'D+5']);
     });
 
-    test('이수율: 처음은 0%', () => eq(K.progress(user(), '2026-10-22').overall, 0));
+    test('이수율: 처음은 입사 시 수료분(입문 54h·채용 시 법정 24h)만 반영', () => {
+      const p = K.progress(user(), '2026-10-22');
+      eq([p.work, p.region, Math.round(p.edu * 1000)], [0, 0, Math.round(78 / 93 * 1000)]);
+    });
     test('이수율: 가중치 40/40/20', () => {
       const s = user();
       K.workItems(s).filter(i => i.kind === '인수인계').forEach(i => s.work.handover[i.id.slice(3)] = true);
       s.events.push({ id: 'e', date: '2026-10-22', time: '', title: 'x' });
       s.work.verified = true; s.work.drafted = true; s.work.connected = ['p6'];
       const p = K.progress(s, '2026-10-22');
-      eq([p.work, p.edu, p.region, Math.round(p.overall * 100)], [1, 0, 0, 40]);
+      eq([p.work, p.region, Math.round(p.overall * 1000)], [1, 0, Math.round((0.4 + 0.4 * 78 / 93) * 1000)]);
     });
     test('교육 이수율은 시간 기준', () => {
-      const s = user(); s.edu.done.job1 = '2026-10-10'; // 직무 8h / 전체 19h
-      eq(Math.round(K.progress(s, '2026-10-22').edu * 1000), Math.round(8 / 19 * 1000));
+      const s = user(); s.edu.done.job1 = '2026-10-10'; // 수료 78h + 직무 8h / 필수 전체 93h
+      eq(Math.round(K.progress(s, '2026-10-22').edu * 1000), Math.round(86 / 93 * 1000));
+    });
+    test('교육: 사무(경영지원) 첫 이수율 44%, 추천 목록 39행', () => {
+      const s = user({ job: '사무(경영지원)' }), cs = K.courses(s, '2026-10-22');
+      const n = g => cs.filter(c => c.group === g).length;
+      eq([K.pct(K.progress(s, '2026-10-22').edu), cs.length, n('jobReq'), n('jobOpt'), n('common'), n('law')], [44, 39, 3, 20, 11, 5]);
+    });
+    test('교육: 선택 과정은 이수율에 반영되지 않음', () => {
+      const s = user({ job: '사무(경영지원)' }), before = K.eduRatio(s, '2026-10-22');
+      K.courses(s, '2026-10-22').filter(c => !c.required).forEach(c => s.edu.done[c.id] = '2026-10-20');
+      eq(K.eduRatio(s, '2026-10-22'), before);
+    });
+    test('교육: 마감 없는 과정이 있어도 AI 추천이 깨지지 않음', () => {
+      const s = user({ job: '사무(경영지원)' });
+      if (!K.courses(s).some(c => !c.deadline)) throw new Error('마감 없는 과정 없음');
+      OB.ai.recommend(s).forEach(x => { if (!K.isValidISO(x.date)) throw new Error(x.date); });
     });
     test('교육 알림: 마감 7일 이내 미이수', () => {
       const cs = K.courses(user(), '2026-10-10'); // 14일 마감 과정 = 10-15, 5일 남음

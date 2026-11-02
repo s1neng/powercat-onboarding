@@ -7,7 +7,7 @@
     if (!p.complete) {
       const left = []
         .concat(K.workItems(state).filter(i => !i.done).map(i => ['업무', i.label]))
-        .concat(K.courses(state).filter(c => !c.doneAt).map(c => ['교육', c.name]))
+        .concat(K.courses(state).filter(c => c.required && !c.doneAt).map(c => ['교육', c.name]))
         .concat(K.regionItems(state).filter(i => !i.done).map(i => ['지역', i.label]));
       return OB.app.header('졸업', null) +
         '<section class="card locked-grad"><div class="lock">🔒</div><h2>아직 졸업 전이에요</h2>' +

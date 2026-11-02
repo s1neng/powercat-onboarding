@@ -32,7 +32,7 @@
       periods: {}, // empId → 온보딩 기간(일), 관리자 지정 (D-01)
       events: [], // { id, date, time, title, source }
       work: { handover: {}, memo: '', verified: false, drafted: false, connected: [] },
-      edu: { done: {} }, // courseId → 이수일
+      edu: { done: {}, applied: {} }, // courseId → 이수일 / 교육신청일
       notifications: [], // { id, courseId, courseName, at, to }
       region: { statsChecked: false, traitsChecked: false, places: [] },
       cheers: {}, // 동기 empId → 보낸 응원 수
@@ -113,9 +113,7 @@
   const ratio = items => items.length ? items.filter(i => i.done).length / items.length : 0;
   function progress(state, today) {
     const work = ratio(workItems(state));
-    const cs = courses(state, today);
-    const total = cs.reduce((a, c) => a + c.hours, 0);
-    const edu = total ? cs.filter(c => c.doneAt).reduce((a, c) => a + c.hours, 0) / total : 0;
+    const edu = OB.core.eduRatio ? OB.core.eduRatio(state, today) : 0; // 직무 필수 + 법정의무, 이수 시간 기준
     const region = ratio(regionItems(state));
     const W = C.WEIGHTS;
     const overall = work * W.work + edu * W.edu + region * W.region;

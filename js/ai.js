@@ -61,11 +61,12 @@
         push(K.toISO(new Date(y, m, Math.min(j.day, last))), '10:00', j.title, state.user.job + ' 반복 업무');
       }
     });
-    K.courses(state).filter(c => !c.doneAt).forEach(c => {
+    K.courses(state).filter(c => !c.doneAt && c.deadline).forEach(c => {
       const early = K.addDays(c.deadline, -3);
       if (early >= today) push(early, '16:00', c.name + ' 수강', '마감 3일 전 여유 확보');
       else push(today, '16:00', c.name + ' 수강', c.left < 0 ? '마감 경과 — 바로 수강 필요' : '마감 임박');
     });
+    K.courses(state).filter(c => !c.doneAt && c.required && !c.deadline && c.next && c.nextLeft <= 60).forEach(c => push(c.next, '09:00', c.name + ' 개설 (수강 신청)', '직무 필수 · 월별 교육 달력 기준 예정일'));
     const p = K.periodOf(state, state.user.empId);
     [30, 60].filter(n => n < p).forEach(n => push(K.addDays(state.user.startDate, n), '15:00', '팀장 면담 (' + n + '일 체크인)', '온보딩 중간 점검'));
     push(K.addDays(state.user.startDate, p), '09:00', '온보딩 목표일', '졸업 목표');

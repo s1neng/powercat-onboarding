@@ -17,7 +17,7 @@
   // ---------- 캘린더 ----------
   function allEvents(state) {
     const fixed = [];
-    K.courses(state).forEach(c => { if (!c.doneAt) fixed.push({ id: 'c-' + c.id, date: c.deadline, time: '', title: c.name + ' 마감', kind: 'edu', fixed: true }); });
+    K.courses(state).forEach(c => { if (!c.doneAt && c.deadline) fixed.push({ id: 'c-' + c.id, date: c.deadline, time: '', title: c.name + ' 마감', kind: 'edu', fixed: true }); });
     const d = K.dday(state);
     fixed.push({ id: 'target', date: d.target, time: '', title: '온보딩 목표일', kind: 'goal', fixed: true });
     const ghosts = visibleRec(state).map(r => ({ id: 'rec:' + r.id, date: r.date, time: '', title: r.title, kind: 'ghost', fixed: true }));
