@@ -36,9 +36,9 @@
     test('잘못된 날짜 거르기', () => { eq(K.isValidISO('2026-02-30'), false); eq(K.isValidISO('2026-02-28'), true); });
     test('HTML 이스케이프', () => eq(K.esc('<img onerror="x">'), '&lt;img onerror=&quot;x&quot;&gt;'));
 
-    test('D-day: 기본 90일', () => {
+    test('D-day: 기본 365일', () => {
       const d = K.dday(user(), '2026-10-22');
-      eq([d.period, d.target, d.left, d.elapsed], [90, '2026-12-30', 69, 21]);
+      eq([d.period, d.target, d.left, d.elapsed], [365, '2027-10-01', 344, 21]);
     });
     test('D-day: 관리자 개인별 기간', () => {
       const s = user(); s.periods['20260999'] = 30;
@@ -62,10 +62,10 @@
       const s = user(); s.edu.done.job1 = '2026-10-10'; // 수료 78h + 직무 8h / 필수 전체 93h
       eq(Math.round(K.progress(s, '2026-10-22').edu * 1000), Math.round(86 / 93 * 1000));
     });
-    test('교육: 사무(경영지원) 첫 이수율 44%, 추천 목록 39행', () => {
+    test('교육: 사무(경영지원) 첫 이수율 44%, 추천 목록 32행', () => {
       const s = user({ job: '사무(경영지원)' }), cs = K.courses(s, '2026-10-22');
       const n = g => cs.filter(c => c.group === g).length;
-      eq([K.pct(K.progress(s, '2026-10-22').edu), cs.length, n('jobReq'), n('jobOpt'), n('common'), n('law')], [44, 39, 3, 20, 11, 5]);
+      eq([K.pct(K.progress(s, '2026-10-22').edu), cs.length, n('jobReq'), n('jobOpt'), n('common'), n('law')], [44, 32, 3, 13, 11, 5]);
     });
     test('교육: 선택 과정은 이수율에 반영되지 않음', () => {
       const s = user({ job: '사무(경영지원)' }), before = K.eduRatio(s, '2026-10-22');
@@ -76,6 +76,12 @@
       const s = user({ job: '사무(경영지원)' });
       if (!K.courses(s).some(c => !c.deadline)) throw new Error('마감 없는 과정 없음');
       OB.ai.recommend(s).forEach(x => { if (!K.isValidISO(x.date)) throw new Error(x.date); });
+    });
+    test('엑셀 반영: 목록은 카테고리 시트, 이달의 추천은 월별달력 시트', () => {
+      const r = OB.data.EDU_REC.byJob['사무(경영지원)'].courses, f = n => r.find(c => c.name === n);
+      eq([f('회계입문과정').months, f('회계입문과정').recMonths], [[3, 9], []]); // 목록엔 있고 월별 추천엔 없음
+      eq(f('신입사무기초과정').recMonths, f('신입사무기초과정').months);
+      eq(['계약실무과정', '법무실무과정', 'My Open Class(경력확인)'].map(n => !!f(n)), [false, false, false]); // 2026-11-02 엑셀에서 삭제
     });
     test('교육 알림: 마감 7일 이내 미이수', () => {
       const cs = K.courses(user(), '2026-10-10'); // 14일 마감 과정 = 10-15, 5일 남음

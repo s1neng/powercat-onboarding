@@ -723,3 +723,26 @@ table.cm tr.det td { background: #faf8ff; height: auto; padding: 8px 10px; borde
 .chat-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .chat-list li { display: flex; flex-direction: column; gap: 1px; border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; }
 @media (max-width: 720px) { table.cm th.nm { max-width: 120px; white-space: normal; } }
+
+/* 업무: 접힌 카드 5개 (지역 모듈의 fold-card 방식. 캘린더만 펼쳐 두고 나머지는 눌러서 펼침) */
+.work-folds { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 16px; }
+.work-folds .fold-card { min-height: 112px; padding: 24px 16px 16px; gap: 10px; }
+.work-folds .fold-card:hover { border-color: #b9d3f7; }
+.work-folds .fold-card.on { border-color: var(--work); background: #f5f9ff; }
+.work-folds .fold-card.on::after { background: #f5f9ff; border-right-color: var(--work); border-bottom-color: var(--work); }
+.work-folds .fold-card.on .fc-chev { color: var(--work); }
+.work-folds .fc-icon { width: 46px; height: 46px; border-radius: 14px; background: #eaf2ff; font-size: 1.45rem; }
+.work-folds .fc-text { gap: 4px; }
+.work-folds .fc-text b { font-size: 1rem; }
+.work-folds .fc-text small { font-size: .8rem; }
+.page-work .fold-panel { margin-top: 16px; }
+@media (max-width: 860px) { .work-folds { grid-template-columns: 1fr; gap: 10px; } .work-folds .fold-card.on::after { display: none; } }
+
+/* 추천 패널 탭([AI 추천][총무방 대화]) + 접힌 카드의 실시간 요약 문구 */
+.rec-tabs { display: flex; gap: 4px; margin-bottom: 2px; }
+.rec-tabs button { flex: 1 1 0; min-width: 0; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.rec-tabs em { font-style: normal; font-size: .72rem; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: #ece6ff; color: #4b32a8; }
+.rec-tabs button.on em { background: #5b3fc4; color: #fff; }
+.rec-tabs .dot { width: 7px; height: 7px; border-radius: 50%; background: #e5484d; flex: none; }
+.chat-sec.bare { border-top: 0; padding-top: 0; }
+.work-folds .fc-text small { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

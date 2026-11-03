@@ -20,19 +20,37 @@
       .catch(e => { s.status = 'error'; s.err = e.message; rerender(); });
   }
 
-  // ---------- B: 추천 패널 아래 섹션 ----------
-  function section(state) {
+  // ---------- B: 추천 패널의 "총무방 대화" 탭 ----------
+  const SHOW = { seasons: 3, recent: 2, past: 2 };   // 탭에 보여주는 항목 수(건수 표시와 같은 값을 쓴다)
+  // 탭 이름 옆에 붙이는 건수. 아직 불러오기 전이면 null
+  function count() {
+    const s = ui();
+    if (s.status !== 'ok') return null;
+    const n = s.data.near;
+    return Math.min(n.seasons.length, SHOW.seasons) + Math.min(n.recent_spikes.length, SHOW.recent) + Math.min(n.past_spikes.length, SHOW.past);
+  }
+  // 접힌 카드 한 줄 설명용 요약. 예) "이번 달 체육문화행사 운영 · 최근 감사·내부통제 급증". 없으면 ''
+  function summary() {
+    const s = ui();
+    if (s.status !== 'ok') return '';
+    const n = s.data.near, parts = [];
+    const se = n.seasons.find(x => x.rel === '이번 달') || n.seasons.find(x => x.rel === '다음 달');
+    if (se) parts.push(se.rel + ' ' + se.task);
+    if (n.recent_spikes.length) parts.push('최근 ' + n.recent_spikes[0].task + ' 급증');
+    return parts.join(' · ');
+  }
+  function section(state, bare) {   // bare: 탭 안에서 쓸 때(위쪽 점선·여백 없음)
     const s = ui();
     if (!s.status || s.status === 'off') return '';
-    let h = '<div class="chat-sec"><div class="rec-head"><h3>💬 총무방 대화</h3><span class="badge demo" title="' + esc(TIP) + '">AI 해석</span></div>';
+    let h = '<div class="chat-sec' + (bare ? ' bare' : '') + '"><div class="rec-head"><h3>💬 총무방 대화</h3><span class="badge demo" title="' + esc(TIP) + '">AI 해석</span></div>';
     if (s.status === 'loading') return h + '<p class="muted small">총무방 대화 집계를 불러오는 중…</p></div>';
     if (s.status !== 'ok') return h + '<p class="muted small">총무방 대화 집계를 불러오지 못했어요. 추천 기능에는 영향이 없어요.</p></div>';
     const d = s.data, n = d.near;
     const item = (id, title, sub) => '<button class="chat-item" data-chat-task="' + id + '"><b>' + esc(title) + '</b><span class="small muted">' + esc(sub) + '</span></button>';
     const block = (label, list) => list.length ? '<div class="chat-block"><div class="chat-label">' + label + '</div>' + list.join('') + '</div>' : '';
-    const seasons = n.seasons.slice(0, 3).map(x => item(x.task_id, (x.rel || x.month + '월') + ' · ' + x.task, '해마다 ' + x.month + '월에 대화가 많았어요 (' + yearsText(x.per_year) + ')'));
-    const recent = n.recent_spikes.slice(0, 2).map(x => item(x.task_id, md(x.week_start) + ' 주 · ' + x.task, x.sessions + '건 · 평소의 ' + Math.round(x.ratio) + '배 몰렸어요'));
-    const past = n.past_spikes.slice(0, 2).map(x => item(x.task_id, x.year + '년 ' + md(x.week_start) + ' 주 · ' + x.task, x.sessions + '건 · 그때 평소의 ' + Math.round(x.ratio) + '배 몰렸어요'));
+    const seasons = n.seasons.slice(0, SHOW.seasons).map(x => item(x.task_id, (x.rel || x.month + '월') + ' · ' + x.task, '해마다 ' + x.month + '월에 대화가 많았어요 (' + yearsText(x.per_year) + ')'));
+    const recent = n.recent_spikes.slice(0, SHOW.recent).map(x => item(x.task_id, md(x.week_start) + ' 주 · ' + x.task, x.sessions + '건 · 평소의 ' + Math.round(x.ratio) + '배 몰렸어요'));
+    const past = n.past_spikes.slice(0, SHOW.past).map(x => item(x.task_id, x.year + '년 ' + md(x.week_start) + ' 주 · ' + x.task, x.sessions + '건 · 그때 평소의 ' + Math.round(x.ratio) + '배 몰렸어요'));
     h += block('이 시기에 해마다 나오는 업무', seasons) + block('최근 크게 몰린 업무', recent) + block('예전 이맘때 몰렸던 업무', past);
     if (!seasons.length && !recent.length && !past.length) h += '<p class="muted small">기준일 전후로 뚜렷한 신호가 없어요.</p>';
     h += '<p class="small muted">' + (d.stale_days > 0 ? '대화는 ' + md(d.data_range.last) + '까지 반영돼 있어요. ' : '') + '날짜 일정이 아니라 월·주 단위 참고 정보예요.</p>' +
@@ -42,10 +60,10 @@
 
   // ---------- C: 시즌 지도 작은 카드 ----------
   const lvl = (v, mx) => (v <= 0 || mx <= 0 ? 0 : Math.max(1, Math.ceil(5 * v / mx)));
-  function card(state) {
+  function card(state, span) {   // span: 카드 폭 클래스 지정(기본 span6, 접힌 카드 안에서는 span12)
     const s = ui();
     if (!s.status || s.status === 'off') return '';
-    let h = '<article class="card span6 chatmap"><div class="card-head"><h2>💬 총무방 시즌 지도</h2><span class="badge demo" title="' + esc(TIP) + '">AI 해석</span></div>';
+    let h = '<article class="card ' + (span || 'span6') + ' chatmap"><div class="card-head"><h2>💬 총무방 시즌 지도</h2><span class="badge demo" title="' + esc(TIP) + '">AI 해석</span></div>';
     if (s.status === 'loading') return h + '<p class="muted small">시즌 지도를 불러오는 중…</p></article>';
     if (s.status !== 'ok') return h + '<p class="muted small">시즌 지도를 불러오지 못했어요. 다른 기능에는 영향이 없어요.</p></article>';
     const d = s.data, am = Number(d.as_of.slice(5, 7));
@@ -143,5 +161,5 @@
     return false;
   }
 
-  OB.chat = { load, section, card, open, click };
+  OB.chat = { load, section, card, open, click, enabled, count, summary };
 })();

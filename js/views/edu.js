@@ -15,6 +15,8 @@
     return ui.rec;
   }
   function recFor(job) { return (D.EDU_REC && D.EDU_REC.byJob[job]) || null; }
+  // 이달의 추천 교육에 보일 월: 엑셀 '월별달력' 시트 기준(recMonths), 없으면 카테고리 시트 개설월(months)
+  const recM = c => c.recMonths || c.months;
 
   // 선택한 월의 실제 개설일(최근)을 앞으로 다가올 같은 월 날짜로 옮겨 '예정일'로 사용
   function plannedDate(c, m) {
@@ -29,7 +31,7 @@
   function nextReq(list, m) {
     for (let i = 1; i <= 12; i++) {
       const mm = (m + i - 1) % 12 + 1;
-      const hit = list.filter(c => isReq(c) && c.months.includes(mm)).sort((a, b) => a.rank - b.rank)[0];
+      const hit = list.filter(c => isReq(c) && recM(c).includes(mm)).sort((a, b) => a.rank - b.rank)[0];
       if (hit) return { month: mm, course: hit };
     }
     return null;
@@ -115,7 +117,7 @@
     if (!D.EDU_REC) return '';
     const u = state.user, ui = recUI(), m = ui.month;
     const myJob = recFor(u.job) ? u.job : MY_DEFAULT_JOB, mine = recFor(myJob);
-    const inM = c => c.months.includes(m), byRank = (a, b) => a.rank - b.rank;
+    const inM = c => recM(c).includes(m), byRank = (a, b) => a.rank - b.rank;
 
     // 카테고리 1
     // ①은 직무필수 → 공통역량 → 수료 순으로 같은 날짜·과정명이 한 번만 남도록 검사
@@ -163,8 +165,8 @@
       '<h4 class="rec-sub">공통역량</h4>' + list(com1, m, state, false, m + '월 개설 예정인 공통역량 과정이 없어요.', sharedKeys) +
       '<h4 class="rec-sub">입문·법정 교육</h4>' + list(done1, m, state, false, '');
 
-    const reqCount = mm => mine.courses.filter(c => isReq(c) && c.months.includes(mm)).length;
-    const allCount = mm => mine.courses.filter(c => !isDone(c) && c.months.includes(mm)).length;
+    const reqCount = mm => mine.courses.filter(c => isReq(c) && recM(c).includes(mm)).length;
+    const allCount = mm => mine.courses.filter(c => !isDone(c) && recM(c).includes(mm)).length;
     const nowM = new Date().getMonth() + 1;
 
     return '<article class="card span12 rec-head">' +

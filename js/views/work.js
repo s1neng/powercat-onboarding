@@ -1,6 +1,7 @@
 // WORK: 업무 이수율, 캘린더(주·월·연 / 직접추가 / AI추천 / 캡처 반영), 인수인계, 업무검증, 담당자 추천, 메일·공문 초안
 (function () {
   const K = OB.core, D = OB.data, esc = K.esc;
+  const maskName = n => n ? n.slice(0, 1) + '*'.repeat(Math.max(n.length - 1, 1)) : ''; // 담당자 이름은 성만 표시 (예: 최**)
   // 이 화면의 팝업. wide 면 근거 설명용으로 넓게 연다.
   const modal = (title, html, mount, wide) => OB.app.modal(title, html, dlg => { dlg.style.width = wide ? 'min(780px, calc(100vw - 32px))' : ''; if (mount) mount(dlg); });
 
@@ -8,6 +9,8 @@
     const u = OB.app.ui;
     if (!u.work) u.work = {
       view: 'month', cursor: K.todayISO(),
+      fold: null,   // 접힌 카드 중 펼쳐진 것(인수인계·총무방·업무검증·담당자·초안). 처음엔 모두 닫힘
+      recTab: 'rec', chatSeen: false,   // 추천 패널의 탭(rec=AI 추천, chat=총무방 대화), 총무방 탭을 열어 본 적이 있는지(새 정보 점 표시용)
       verifyText: '', verifyResult: null,
       draft: { kind: 'mail', purpose: '협조 요청', to: '', topic: '', points: '', ref: '', attach: '' }, draftOut: null
     };
@@ -105,8 +108,17 @@
     return shortDate(it.date) + ' · ' + (n <= 0 ? '오늘' : n + '일 뒤');
   }
   function recPanel(state) {
-    const r = ui().rec;
-    let h = '<aside class="rec-panel" id="recPanel"><div class="rec-head"><h3>✨ AI 추천 일정</h3>';
+    const s = ui(), r = s.rec;
+    // 패널 맨 위 탭: [✨ AI 추천 N] [💬 총무방 대화 M]. 총무방 데이터가 있는 직무(사무)에서만 나타남. 처음엔 AI 추천 탭
+    const chatOn = !!(OB.chat && OB.chat.enabled && OB.chat.enabled(state));
+    const tab = chatOn && s.recTab === 'chat' ? 'chat' : 'rec';
+    const nRec = r && r.status === 'ok' ? visibleRec(state).length : null, nChat = chatOn && OB.chat.count ? OB.chat.count(state) : null;
+    const tabs = !chatOn ? '' : '<div class="tabs rec-tabs" role="tablist">' +
+      '<button type="button" role="tab" aria-selected="' + (tab === 'rec') + '" class="' + (tab === 'rec' ? 'on' : '') + '" data-rec-tab="rec">✨ AI 추천' + (nRec == null ? '' : ' <em>' + nRec + '</em>') + '</button>' +
+      '<button type="button" role="tab" aria-selected="' + (tab === 'chat') + '" class="' + (tab === 'chat' ? 'on' : '') + '" data-rec-tab="chat">💬 총무방 대화' + (nChat == null ? '' : ' <em>' + nChat + '</em>') +
+        (nChat && !s.chatSeen && tab !== 'chat' ? '<i class="dot" role="img" aria-label="새 정보"></i>' : '') + '</button></div>';
+    if (tab === 'chat') return '<aside class="rec-panel" id="recPanel">' + tabs + OB.chat.section(state, true) + '</aside>';
+    let h = '<aside class="rec-panel" id="recPanel">' + tabs + '<div class="rec-head"><h3>✨ AI 추천 일정</h3>';
     if (!r || r.status === 'loading') return h + '</div><p class="muted small">공문 기록에서 추천을 불러오는 중…</p></aside>';
     const pre = r.demo === 'pre', g = r.generated || {};
     const tip = pre ? '실시간 AI 호출이 아니라, 과거 공문 DB로 AI가 미리 만들고 코드로 검증해 저장한 결과예요. 모두 예상 일정이며 확정이 아니에요.' +
@@ -121,7 +133,7 @@
       '<p class="small">' + esc(it.why || '') + '</p>' +
       '<div class="row gap-s wrap"><button class="btn small primary" data-rec-add="' + esc(it.id) + '">캘린더에 등록</button>' + (it.evidence && it.evidence.length ? '<button class="btn small" data-rec-detail="' + esc(it.id) + '">자세히 보기</button>' : '') + '<button class="btn small ghost" data-rec-ignore="' + esc(it.id) + '">무시</button></div></div>').join('');
     if (r.ignored.length) h += '<button class="btn small ghost" data-rec-reset>무시한 추천 ' + r.ignored.length + '개 다시 보기</button>';
-    return h + (OB.chat ? OB.chat.section(state) : '') + '</aside>';
+    return h + '</aside>';   // 총무방 대화(B)는 위쪽 탭으로 옮김. 공문 추천과 별개 자료
   }
   const aiSnapshot = it => ({ why: it.why, basis: it.basis || '', range: it.range || null, evidence: it.evidence || [], label: it.label || '예상', series_id: it.series_id || null,
     predicted: it.predicted || it.date, ongoing: !!it.ongoing, support_years: it.support_years || [], n_docs: it.n_docs || 0, avg_lead_days: it.avg_lead_days == null ? null : it.avg_lead_days,
@@ -150,46 +162,35 @@
     const people = D.PEOPLE.filter(x => x.job === u.job).sort((a, b) => (b.hq === u.hq) - (a.hq === u.hq) || b.years - a.years);
     const dr = s.draft;
 
-    return OB.app.header('업무', p.work, 'work') +
-      '<section class="missions">' +
-        '<div class="mission ' + (ho.every(i => i.done) ? 'done' : '') + '"><span>' + (ho.every(i => i.done) ? '✅' : '📋') + '</span>인수인계 ' + ho.filter(i => i.done).length + '/' + ho.length + '</div>' +
-        missions.map(m => '<div class="mission ' + (m.done ? 'done' : '') + '"><span>' + (m.done ? '✅' : '○') + '</span>' + esc(m.label) + '</div>').join('') +
-      '</section>' +
-      '<section class="grid">' +
-        '<article class="card span12 calendar">' +
-          '<div class="card-head wrap"><h2>캘린더</h2>' +
-            '<div class="tabs" role="tablist">' + [['week', '주간'], ['month', '월간'], ['year', '연간']].map(([k, l]) => '<button role="tab" aria-selected="' + (s.view === k) + '" class="' + (s.view === k ? 'on' : '') + '" data-view="' + k + '">' + l + '</button>').join('') + '</div>' +
-          '</div>' +
-          '<div class="cal-bar"><div class="row"><button class="btn ghost icon" data-nav="-1" aria-label="이전">‹</button><b class="cal-title">' + calTitle(s) + '</b><button class="btn ghost icon" data-nav="1" aria-label="다음">›</button><button class="btn ghost small" data-nav="0">오늘</button></div>' +
-            '<div class="row gap-s"><button class="btn small" data-act="add">+ 일정</button><button class="btn small ai" data-act="recommend">✨ 추천 새로고침</button><button class="btn small ai" data-act="capture">📷 메일·쪽지 반영</button></div></div>' +
-          '<div class="cal-wrap"><div class="cal-main">' + cal +
-          '<div class="legend small muted"><span class="ev mine">내 일정</span><span class="ev edu">교육 마감</span><span class="ev goal">온보딩 목표일</span><span class="ev ai">✨ 등록한 AI 추천</span><span class="ev ghost">✨ AI 추천(예상·미등록)</span></div></div>' +
-          recPanel(state) + '</div>' +
-        '</article>' +
-        '<article class="card span6 handover">' +
+    // ---- 접힌 카드(지역 모듈과 같은 방식): 카드를 누르면 아래에 내용이 펼쳐짐, 한 번에 하나, 처음엔 모두 닫힘 ----
+    const chatOn = !!(OB.chat && OB.chat.enabled && OB.chat.enabled(state));
+    const handoverCard = () =>
+        '<article class="card span12 handover">' +
           '<div class="card-head"><h2>인수인계</h2><span class="muted small">' + ho.filter(i => i.done).length + '/' + ho.length + '</span></div>' +
           '<ul class="checklist">' + ho.map(i => '<li><label><input type="checkbox" data-ho="' + i.id.slice(3) + '"' + (i.done ? ' checked' : '') + '><span>' + esc(i.label) + '</span></label></li>').join('') + '</ul>' +
           '<label class="small muted">인수인계 메모<textarea id="hoMemo" rows="4" placeholder="전임자 연락처, 주의사항 등">' + esc(state.work.memo) + '</textarea></label>' +
-        '</article>' +
-        (OB.chat ? OB.chat.card(state) : '') +
+        '</article>';
+    const verifyCard = () =>
         '<article class="card span12 verify">' +
           '<div class="card-head"><h2>업무검증</h2><span class="muted small">규정 · 지침 · 매뉴얼 참고</span></div>' +
           '<textarea id="verifyText" rows="3" placeholder="처리하려는 업무를 적어 주세요. 예) 협력업체와 점심 식사 후 계약 견적 받기">' + esc(s.verifyText) + '</textarea>' +
           '<div class="row wrap gap-s examples">' + ['출장 숙박비 정산', '물품 구매 견적 1개로 계약', '고객 연락처 명단 외부 메일 전송', '정전 작업 현장 투입'].map(x => '<button class="chip btnlike" data-ex="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
           '<button class="btn primary" data-act="verify">검증하기</button>' +
           '<div id="verifyOut">' + verifyResult(s) + '</div>' +
-        '</article>' +
-        '<article class="card span6 people">' +
+        '</article>';
+    const peopleCard = () =>
+        '<article class="card span12 people">' +
           '<div class="card-head"><h2>동일분야 담당자 추천</h2><span class="muted small">' + esc(u.job) + '</span></div>' +
           '<ul class="person-list">' + people.map(x => {
             const on = state.work.connected.includes(x.id);
-            return '<li><span class="avatar">' + esc(x.name.slice(0, 1)) + '</span><div><b>' + esc(x.name) + '</b> <span class="muted small">' + x.years + '년차</span>' +
+            return '<li><span class="avatar">' + esc(x.name.slice(0, 1)) + '</span><div><b>' + esc(maskName(x.name)) + '</b> <span class="muted small">' + x.years + '년차</span>' +
               (x.hq === u.hq ? ' <span class="tag">같은 본부</span>' : '') +
               '<div class="small muted">' + esc(x.hq) + ' ' + esc(x.office) + ' · ' + esc(x.topic) + '</div></div>' +
               '<button class="btn small ' + (on ? 'ghost' : '') + '" data-connect="' + x.id + '"' + (on ? ' disabled' : '') + '>' + (on ? '연결됨 ✓' : '연결 요청') + '</button></li>';
           }).join('') + '</ul>' +
           '<p class="small muted">개인정보 보호를 위해 연락처는 표시하지 않고, 연결 요청은 사내 쪽지로 전달됩니다.</p>' +
-        '</article>' +
+        '</article>';
+    const draftCard = () =>
         '<article class="card span12 draft">' +
           '<div class="card-head"><h2>메일 · 공문 초안 AI</h2>' + aiBadge() + '</div>' +
           '<div class="draft-grid">' +
@@ -206,8 +207,40 @@
               '<textarea id="draftText" rows="16">' + esc(s.draftOut.text) + '</textarea><div class="row gap-s"><button class="btn" data-act="copy">복사</button>' + (s.draftOut.demo ? '<span class="small muted">서식 기반 시연 초안 — 사내 AI 연결 시 문장이 다듬어집니다</span>' : '') + '</div>' :
               '<div class="empty"><p>왼쪽에 내용을 입력하고 <b>초안 작성</b>을 누르면<br>여기에 초안이 나타나요. 보내기 전에 꼭 검토하세요.</p></div>') + '</div>' +
           '</div>' +
+        '</article>';
+    const panels = { handover: handoverCard, chat: () => (OB.chat ? OB.chat.card(state, 'span12') : ''), verify: verifyCard, people: peopleCard, draft: draftCard };
+    const folds = [
+      { id: 'handover', icon: '📋', title: '인수인계', sub: '완료 ' + ho.filter(i => i.done).length + '/' + ho.length, done: ho.length > 0 && ho.every(i => i.done) },
+      chatOn && { id: 'chat', icon: '💬', title: '총무방 시즌 지도', sub: esc((OB.chat.summary && OB.chat.summary(state)) || '대화가 몰리는 시기별 업무'), done: false },   // 실제 신호 한 줄(예: 이번 달 ○○ · 최근 ○○ 급증), 없으면 기본 설명
+      { id: 'verify', icon: '✅', title: '업무검증', sub: '규정 · 지침 · 매뉴얼 참고', done: !!state.work.verified },
+      { id: 'people', icon: '👥', title: '동일분야 담당자 추천', sub: esc(u.job) + ' · ' + people.length + '명', done: state.work.connected.length > 0 },
+      { id: 'draft', icon: '✉️', title: '메일 · 공문 초안 AI', sub: '업무 메일·공문 초안 작성', done: !!state.work.drafted }
+    ].filter(Boolean);
+    if (s.fold && !folds.some(x => x.id === s.fold)) s.fold = null;   // 직무가 바뀌어 없어진 카드가 열려 있으면 닫음
+
+    return OB.app.header('업무', p.work, 'work') +
+      '<section class="missions">' +
+        '<div class="mission ' + (ho.every(i => i.done) ? 'done' : '') + '"><span>' + (ho.every(i => i.done) ? '✅' : '📋') + '</span>인수인계 ' + ho.filter(i => i.done).length + '/' + ho.length + '</div>' +
+        missions.map(m => '<div class="mission ' + (m.done ? 'done' : '') + '"><span>' + (m.done ? '✅' : '○') + '</span>' + esc(m.label) + '</div>').join('') +
+      '</section>' +
+      '<section class="grid">' +
+        '<article class="card span12 calendar">' +
+          '<div class="card-head wrap"><h2>캘린더</h2>' +
+            '<div class="tabs" role="tablist">' + [['week', '주간'], ['month', '월간'], ['year', '연간']].map(([k, l]) => '<button role="tab" aria-selected="' + (s.view === k) + '" class="' + (s.view === k ? 'on' : '') + '" data-view="' + k + '">' + l + '</button>').join('') + '</div>' +
+          '</div>' +
+          '<div class="cal-bar"><div class="row"><button class="btn ghost icon" data-nav="-1" aria-label="이전">‹</button><b class="cal-title">' + calTitle(s) + '</b><button class="btn ghost icon" data-nav="1" aria-label="다음">›</button><button class="btn ghost small" data-nav="0">오늘</button></div>' +
+            '<div class="row gap-s"><button class="btn small" data-act="add">+ 일정</button><button class="btn small ai" data-act="recommend">✨ 추천 새로고침</button><button class="btn small ai" data-act="capture">📷 메일·쪽지 반영</button></div></div>' +
+          '<div class="cal-wrap"><div class="cal-main">' + cal +
+          '<div class="legend small muted"><span class="ev mine">내 일정</span><span class="ev edu">교육 마감</span><span class="ev goal">온보딩 목표일</span><span class="ev ai">✨ 등록한 AI 추천</span><span class="ev ghost">✨ AI 추천(예상·미등록)</span></div></div>' +
+          recPanel(state) + '</div>' +
         '</article>' +
-      '</section>';
+      '</section>' +
+      '<section class="fold-cards work-folds" role="tablist">' + folds.map((x, i) =>
+        '<button type="button" class="fold-card' + (s.fold === x.id ? ' on' : '') + '" data-fold="' + x.id + '" aria-expanded="' + (s.fold === x.id) + '" aria-controls="work-fold-panel">' +
+          '<span class="fc-no">' + (i + 1) + '</span><span class="fc-icon" aria-hidden="true">' + x.icon + '</span>' +
+          '<span class="fc-text"><b>' + esc(x.title) + '</b><small>' + x.sub + '</small></span>' +
+          (x.done ? '<span class="fc-done">✓</span>' : '') + '<span class="fc-chev" aria-hidden="true">⌄</span></button>').join('') + '</section>' +
+      (s.fold ? '<section class="grid fold-panel" id="work-fold-panel">' + panels[s.fold]() + '</section>' : '');
   }
 
   const aiBadge = () => '<span class="badge ' + (OB.ai.live() ? 'live' : '') + '">' + (OB.ai.live() ? '사내 AI 연결됨' : '시연 모드 · 외부 전송 없음') + '</span>';
@@ -419,7 +452,20 @@
       const t = e.target;
       let b;
       if (OB.chat && OB.chat.click(e)) return;
-      if ((b = t.closest('[data-ev]'))) { e.stopPropagation(); if (b.dataset.ev.startsWith('rec:')) focusRec(b.dataset.ev.slice(4)); else eventModal(b.dataset.ev); return; }
+      if ((b = t.closest('[data-rec-tab]'))) {   // 추천 패널 탭 전환(AI 추천 / 총무방 대화)
+        s.recTab = b.dataset.recTab;
+        if (s.recTab === 'chat') s.chatSeen = true;
+        OB.app.render();
+        return;
+      }
+      if ((b = t.closest('[data-ev]'))) {
+        e.stopPropagation();
+        if (b.dataset.ev.startsWith('rec:')) {
+          if (s.recTab === 'chat') { s.recTab = 'rec'; OB.app.render(); }   // 캘린더의 점선 칩을 누르면 해당 추천 카드가 있는 탭으로 돌아감
+          focusRec(b.dataset.ev.slice(4));
+        } else eventModal(b.dataset.ev);
+        return;
+      }
       if ((b = t.closest('[data-rec-add]'))) { recAdd(b.dataset.recAdd); return; }
       if ((b = t.closest('[data-rec-detail]'))) {
         const it = s.rec.items.find(x => x.id === b.dataset.recDetail);
@@ -455,11 +501,18 @@
       }
       if ((b = t.closest('[data-month]'))) { s.view = 'month'; s.cursor = b.dataset.month; s.anim = 'zoom'; OB.app.render(); return; }
       if ((b = t.closest('[data-day]'))) { addModal(b.dataset.day); return; }
-      if ((b = t.closest('[data-ex]'))) { root.querySelector('#verifyText').value = b.dataset.ex; return; }
+      if ((b = t.closest('[data-fold]'))) {   // 접힌 카드: 누르면 펼치고, 같은 카드를 다시 누르면 접음(한 번에 하나)
+        keepInputs(root);   // 다시 그리기 전에 입력 중인 값(업무검증 문구, 초안 양식·본문)을 보관
+        s.fold = s.fold === b.dataset.fold ? null : b.dataset.fold;
+        OB.app.render();
+        if (s.fold) { const el = document.querySelector('.work-folds'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        return;
+      }
+      if ((b = t.closest('[data-ex]'))) { const ta = root.querySelector('#verifyText'); if (ta) ta.value = b.dataset.ex; return; }
       if ((b = t.closest('[data-connect]'))) {
         const id = b.dataset.connect, x = D.PEOPLE.find(p => p.id === id);
         OB.app.update(st => { if (!st.work.connected.includes(id)) st.work.connected.push(id); });
-        OB.app.toast(x.name + '님께 사내 쪽지로 연결 요청을 보냈어요');
+        OB.app.toast(maskName(x.name) + '님께 사내 쪽지로 연결 요청을 보냈어요');
         return;
       }
       if ((b = t.closest('[data-kind]'))) { saveDraftForm(root); s.draft.kind = b.dataset.kind; OB.app.render(); return; }
@@ -469,7 +522,9 @@
       else if (act === 'recommend') { s.rec = null; loadRec(OB.app.state); const el = root.querySelector('#recPanel'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
       else if (act === 'capture') captureModal();
       else if (act === 'verify') {
-        const text = root.querySelector('#verifyText').value.trim();
+        const vt = root.querySelector('#verifyText');
+        if (!vt) return;
+        const text = vt.value.trim();
         if (!text) { OB.app.toast('검증할 업무 내용을 적어 주세요'); return; }
         s.verifyText = text; s.verifyResult = 'loading';
         root.querySelector('#verifyOut').innerHTML = verifyResult(s);
@@ -477,6 +532,7 @@
         OB.app.update(st => { st.work.verified = true; });
       } else if (act === 'copy') {
         const ta = root.querySelector('#draftText');
+        if (!ta) return;
         try { await navigator.clipboard.writeText(ta.value); } catch (err) { ta.select(); document.execCommand('copy'); }
         OB.app.toast('초안을 복사했어요');
       }
@@ -485,9 +541,11 @@
       const h = e.target.dataset && e.target.dataset.ho;
       if (h) OB.app.update(st => { st.work.handover[h] = e.target.checked; });
     });
+    // 인수인계 메모·초안 양식은 해당 카드가 펼쳐져 있을 때만 화면에 있다
     const memo = root.querySelector('#hoMemo');
-    memo.addEventListener('blur', () => OB.app.update(st => { st.work.memo = memo.value; }, { render: false }));
-    root.querySelector('#draftForm').addEventListener('submit', async e => {
+    if (memo) memo.addEventListener('blur', () => OB.app.update(st => { st.work.memo = memo.value; }, { render: false }));
+    const draftForm = root.querySelector('#draftForm');
+    if (draftForm) draftForm.addEventListener('submit', async e => {
       e.preventDefault();
       saveDraftForm(root);
       if (!s.draft.topic.trim()) { OB.app.toast('제목을 입력해 주세요'); return; }
@@ -499,7 +557,16 @@
   }
   function saveDraftForm(root) {
     const f = root.querySelector('#draftForm'), d = ui().draft;
+    if (!f) return;
     ['purpose', 'to', 'topic', 'points', 'ref', 'attach'].forEach(k => { if (f[k]) d[k] = f[k].value; });
+  }
+  // 접힌 카드를 열고 닫기 전에 입력 중인 값을 보관한다(다시 그리면 입력칸이 새로 만들어지므로)
+  function keepInputs(root) {
+    const s = ui(), v = root.querySelector('#verifyText'), dt = root.querySelector('#draftText'), m = root.querySelector('#hoMemo');
+    if (m) OB.app.update(st => { st.work.memo = m.value; }, { render: false });   // 메모는 포커스를 잃을 때(blur)도 저장되지만, 열고 닫는 순간에도 확실히 저장
+    if (v) s.verifyText = v.value;
+    if (dt && s.draftOut) s.draftOut.text = dt.value;
+    saveDraftForm(root);
   }
 
   OB.views.work = { render, mount };

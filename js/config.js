@@ -5,7 +5,7 @@ OB.config = {
   STORAGE_KEY: 'powercat-onboarding-v3',
 
   // D-01: 기본 온보딩 기간(일). 관리자 화면에서 개인별로 바꿀 수 있음
-  DEFAULT_PERIOD_DAYS: 90,
+  DEFAULT_PERIOD_DAYS: 365,
 
   // Q-03: 사번 형식 (임시 규칙)
   EMP_ID_PATTERN: /^\d{8}$/,
