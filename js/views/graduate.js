@@ -40,7 +40,7 @@
     ctx.font = font('800', 76); ctx.fillText('수 료 증', W / 2, 190);
     ctx.font = font('500', 26); ctx.fillStyle = '#5a6475'; ctx.fillText('CERTIFICATE OF ONBOARDING', W / 2, 235);
     ctx.textAlign = 'left'; ctx.fillStyle = '#1b2333'; ctx.font = font('600', 30);
-    [['성      명', u.name], ['사      번', u.empId], ['소      속', u.hq], ['직      무', u.job], ['온보딩 기간', K.fmtDate(u.startDate) + ' ~ ' + K.fmtDate(d.target) + ' (' + d.period + '일)']]
+    [['성      명', u.name], ['사      번', u.empId], ['소      속', u.hq], ['직      무', u.job], ['온보딩 기간', K.fmtDateY(u.startDate) + ' ~ ' + K.fmtDateY(d.target) + ' (' + d.period + '일)']]
       .forEach(([k, v], i) => { ctx.fillStyle = '#5a6475'; ctx.fillText(k, 250, 330 + i * 52); ctx.fillStyle = '#1b2333'; ctx.fillText(v, 470, 330 + i * 52); });
     ctx.textAlign = 'center'; ctx.font = font('500', 30); ctx.fillStyle = '#1b2333';
     ctx.fillText('위 사람은 신입사원 온보딩 과정의 업무·교육·지역 목표를', W / 2, 640);

@@ -83,6 +83,7 @@
       eq(f('신입사무기초과정').recMonths, f('신입사무기초과정').months);
       eq(['계약실무과정', '법무실무과정', 'My Open Class(경력확인)'].map(n => !!f(n)), [false, false, false]); // 2026-11-02 엑셀에서 삭제
     });
+    test('연도 포함 날짜 표기', () => { eq(K.fmtDateY('2027-11-03'), '2027년 11월 3일'); eq(K.fmtDateY('2027-11-03', true), '2027년 11월 3일 (수)'); });
     test('교육 알림: 마감 7일 이내 미이수', () => {
       const cs = K.courses(user(), '2026-10-10'); // 14일 마감 과정 = 10-15, 5일 남음
       eq(cs.filter(c => c.alert).map(c => c.id), ['law1', 'law2']);

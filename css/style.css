@@ -300,7 +300,8 @@ label > input, label > select, label > textarea { margin-top: 4px; color: var(--
 .ev { display: block; font-size: .78rem; padding: 2px 6px; border-radius: 5px; background: #e8f0ff; color: #1f4fae; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .ev em { font-style: normal; font-weight: 700; margin-right: 3px; }
 .ev.edu { background: #e3f6ec; color: #0f7a50; } .ev.goal { background: var(--yellow-soft); color: #8a6100; font-weight: 700; }
-.more { font-size: .7rem; color: var(--muted); padding-left: 4px; }
+.more { font-size: .7rem; color: var(--muted); padding-left: 4px; cursor: pointer; }
+.more:hover { color: var(--blue); text-decoration: underline; }
 .legend { display: flex; gap: 8px; } .legend .ev { display: inline-block; cursor: default; }
 .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
 .wday { background: #fafbfd; border-radius: 10px; padding: 8px; min-height: 180px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; min-width: 0; }
@@ -739,10 +740,14 @@ table.cm tr.det td { background: #faf8ff; height: auto; padding: 8px 10px; borde
 @media (max-width: 860px) { .work-folds { grid-template-columns: 1fr; gap: 10px; } .work-folds .fold-card.on::after { display: none; } }
 
 /* 추천 패널 탭([AI 추천][총무방 대화]) + 접힌 카드의 실시간 요약 문구 */
-.rec-tabs { display: flex; gap: 4px; margin-bottom: 2px; }
-.rec-tabs button { flex: 1 1 0; min-width: 0; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
-.rec-tabs em { font-style: normal; font-size: .72rem; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: #ece6ff; color: #4b32a8; }
-.rec-tabs button.on em { background: #5b3fc4; color: #fff; }
-.rec-tabs .dot { width: 7px; height: 7px; border-radius: 50%; background: #e5484d; flex: none; }
+.page-work .rec-tabs { display: flex; gap: 4px; margin-bottom: 2px; }
+.page-work .rec-tabs button { flex: 1 1 0; min-width: 0; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.page-work .rec-tabs em { font-style: normal; font-size: .72rem; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: #ece6ff; color: #4b32a8; }
+.page-work .rec-tabs button.on em { background: #5b3fc4; color: #fff; }
+.page-work .rec-tabs .dot { width: 7px; height: 7px; border-radius: 50%; background: #e5484d; flex: none; }
 .chat-sec.bare { border-top: 0; padding-top: 0; }
 .work-folds .fc-text small { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* 휴대폰 월간 달력: 날짜를 눌렀을 때 뜨는 그날 일정 목록 */
+.day-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.day-list .ev { display: block; white-space: normal; overflow: visible; font-size: .95rem; padding: 10px 12px; line-height: 1.35; border-radius: 10px; }

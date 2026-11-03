@@ -23,9 +23,9 @@
         rows.map(r => {
           const period = K.periodOf(state, r.empId), target = K.addDays(r.startDate, period);
           return '<tr><td>' + esc(r.empId) + '</td><td>' + esc(r.name) + (r.me ? ' <span class="tag">이 브라우저</span>' : '') + '</td><td>' + esc(r.hq) + '</td><td>' + esc(r.job) + '</td>' +
-            '<td>' + (r.me ? '<input type="date" class="mini-in" data-start value="' + r.startDate + '">' : K.fmtDate(r.startDate)) + '</td>' +
+            '<td>' + (r.me ? '<input type="date" class="mini-in" data-start value="' + r.startDate + '">' : K.fmtDateY(r.startDate)) + '</td>' +
             '<td><input type="number" min="7" max="365" class="mini-in" data-period="' + esc(r.empId) + '" value="' + period + '"></td>' +
-            '<td>' + K.fmtDate(target) + '</td><td>' + K.ddayLabel(K.diffDays(K.todayISO(), target)) + '</td>' +
+            '<td>' + K.fmtDateY(target) + '</td><td>' + K.ddayLabel(K.diffDays(K.todayISO(), target)) + '</td>' +
             '<td class="rate-cell"><b>' + K.pct(r.progress) + '%</b>' + OB.app.bar(r.progress) + '</td></tr>';
         }).join('') + '</tbody></table></div>' +
         '<p class="small muted">동기 데이터는 서버 연동 전 샘플입니다 (Q-24).</p></article>' +

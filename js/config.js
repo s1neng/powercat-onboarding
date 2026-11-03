@@ -40,7 +40,7 @@ OB.config = {
 
   // Supabase (본부 공유 장소 저장 + 카카오 검색 중계). 비어 있으면 브라우저 저장소만 사용.
   // anon 키는 공개용이라 여기 넣어도 됩니다. service_role 키·카카오 키는 절대 넣지 마세요.
-  // 연결 보류 중 (프로젝트 완성 후 연결 예정). 연결 방법: supabase/schema.sql 실행 → place-search 함수 배포 → KAKAO_REST_KEY 등록 → 아래 두 값 입력
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: ''
+  // 테이블이 아직 없으면 조용히 브라우저 저장소로 동작한다. 공유를 켜려면 supabase/schema.sql 실행. 이름 검색은 place-search 함수 배포 + KAKAO_REST_KEY 등록
+  SUPABASE_URL: 'https://rfvkrppguehzkxxmojnr.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmdmtycHBndWVoemt4eG1vam5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwODc4MDUsImV4cCI6MjEwODY2MzgwNX0.Cgi5NLs1pZtWH41m7Kz-3LjLd-2OsvmklTJSsLkmzFk'
 };

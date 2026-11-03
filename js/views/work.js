@@ -372,6 +372,23 @@
       };
     });
   }
+  // 그날 일정 목록: 월간 달력의 +N을 눌렀을 때. 휴대폰은 일정 글자가 막대로 줄어들므로 날짜를 누를 때도 연다
+  const isPhone = () => window.matchMedia('(max-width: 720px)').matches;
+  function dayModal(iso) {
+    const evs = allEvents(OB.app.state).filter(x => x.date === iso);
+    if (!evs.length) { addModal(iso); return; }
+    modal(K.fmtDate(iso, true) + ' 일정 ' + evs.length + '건', '<ul class="day-list">' + evs.map(x => '<li>' + chip(x, true) + '</li>').join('') + '</ul><button class="btn primary" id="dayAdd">+ 일정 추가</button>', dlg => {
+      dlg.querySelector('#dayAdd').onclick = () => addModal(iso);
+      dlg.querySelector('.day-list').onclick = e => {
+        const c = e.target.closest('[data-ev]');
+        if (!c) return;
+        if (!c.dataset.ev.startsWith('rec:')) { eventModal(c.dataset.ev); return; }
+        OB.app.closeModal();
+        ui().recTab = 'rec'; OB.app.render();
+        focusRec(c.dataset.ev.slice(4));
+      };
+    });
+  }
   function candidateList(list, source) {
     if (!list.length) return '<p class="muted">날짜를 찾지 못했어요. 날짜(예: 11월 3일, 2026.11.03, 내일)가 들어 있는지 확인해 주세요.</p>';
     return '<form id="candForm" class="stack"><ul class="cands">' + list.map((c, i) =>
@@ -458,6 +475,7 @@
         OB.app.render();
         return;
       }
+      if ((b = t.closest('.day')) && (isPhone() || t.closest('.more'))) { dayModal(b.dataset.day); return; }
       if ((b = t.closest('[data-ev]'))) {
         e.stopPropagation();
         if (b.dataset.ev.startsWith('rec:')) {

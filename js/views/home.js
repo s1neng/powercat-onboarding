@@ -10,8 +10,14 @@
     const w = K.workItems(state).find(i => !i.done);
     if (p.work <= p.edu && w) return '업무에서 "' + w.label + '"부터 해 보면 좋아요.';
     const r = K.regionItems(state).find(i => !i.done);
-    if (r && p.region < 1 && p.region <= p.work) return u.hq + '의 ' + r.label.replace(' 1곳', '').replace(' 1가지', '') + '을(를) 알려주세요!';
-    if (w) return '업무에서 "' + w.label + '"을(를) 진행해 보세요.';
+    if (r && p.region < 1 && p.region <= p.work) return {
+      traits: u.hq + '는 어떤 지역일까요? 퀴즈로 알아봐요!',
+      stats: r.label.split(' ')[0] + ' 전력사용량을 보고 퀴즈를 풀어 보세요!',
+      food: u.hq + '에서 아는 맛집을 알려주세요!',
+      tour: u.hq + '에서 추천할 관광지를 알려주세요!',
+      trait: u.hq + '의 지역특성을 하나 알려주세요!'
+    }[r.id];
+    if (w) return '업무에서 "' + w.label + '" 항목을 진행해 보세요.';
     return '남은 교육을 마무리하면 졸업이에요!';
   }
 
@@ -20,8 +26,8 @@
     const peers = D.PEERS;
     const cats = [
       { key: 'work', name: '업무', icon: '💼', desc: '캘린더 · 인수인계 · 업무검증 · AI 초안', r: p.work },
-      { key: 'edu', name: '교육', icon: '🎓', desc: '필수교육 이수 · 교육 일정', r: p.edu },
-      { key: 'region', name: '지역', icon: '🗺️', desc: '사업소 지표 · 맛집 · 관광지 · 지역특성', r: p.region }
+      { key: 'edu', name: '교육', icon: '🎓', desc: '필수교육 이수 · 교육 추천 · 동기 수강', r: p.edu },
+      { key: 'region', name: '지역', icon: '🗺️', desc: '전력사용량 지표 · 맛집 · 관광지 · 지역특성', r: p.region }
     ];
     return '<header class="top">' +
         '<span class="brand">⚡ 파워캣 온보딩</span>' +
@@ -31,7 +37,7 @@
         '<article class="card dday span4">' +
           '<h2>온보딩 D-day</h2>' +
           '<div class="dday-num ' + (d.left < 0 ? 'over' : '') + '">' + K.ddayLabel(d.left) + '</div>' +
-          '<p class="muted">목표일 ' + K.fmtDate(d.target, true) + ' · 총 ' + d.period + '일</p>' +
+          '<p class="muted">목표일 ' + K.fmtDateY(d.target, true) + ' · 총 ' + d.period + '일</p>' +
           OB.app.bar(d.ratio, 'time') +
           '<p class="small muted">' + d.elapsed + '일째 / ' + d.period + '일</p>' +
         '</article>' +

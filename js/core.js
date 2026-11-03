@@ -19,6 +19,7 @@
   function diffDays(a, b) { return Math.round((parseISO(b) - parseISO(a)) / 86400000); }
   function isValidISO(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s || '') && toISO(parseISO(s)) === s; }
   const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+  function fmtDateY(iso, withDow) { return parseISO(iso).getFullYear() + '년 ' + fmtDate(iso, withDow); }
   function fmtDate(iso, withDow) {
     const d = parseISO(iso);
     return (d.getMonth() + 1) + '월 ' + d.getDate() + '일' + (withDow ? ' (' + WEEK[d.getDay()] + ')' : '');
@@ -196,7 +197,7 @@
   }
 
   OB.core = {
-    esc, uid, toISO, parseISO, todayISO, addDays, diffDays, isValidISO, fmtDate, WEEK,
+    esc, uid, toISO, parseISO, todayISO, addDays, diffDays, isValidISO, fmtDate, fmtDateY, WEEK,
     defaultState, load, save, reset,
     periodOf, dday, ddayLabel, workItems, courses, regionItems, progress, pct,
     parseSchedule
