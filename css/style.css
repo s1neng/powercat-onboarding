@@ -484,9 +484,10 @@ label > input, label > select, label > textarea { margin-top: 4px; color: var(--
 .sc-grid2 figure { margin: 0; min-width: 0; }
 .sc-grid2 figcaption { font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
 .sc-grid2 figcaption b { color: var(--text); }
-/* 두 그래프 모두 가로로 넓게: 위아래로 쌓아 카드 전체 폭 사용 */
+/* 그래프는 가로로 넓게: 카드 전체 폭 사용 */
 .traits .sc-grid2 { grid-template-columns: 1fr; gap: 24px; }
-/* 그래프 제목: 번호 배지 + 굵은 제목 + 한 줄 설명 */
+.sc-grid2.one { grid-template-columns: 1fr; margin-top: 16px; }
+/* 그래프 제목: 굵은 제목 + 한 줄 설명 */
 .sc-grid2 .fig-cap { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; margin-bottom: 10px; background: #fff7f0; border-left: 4px solid var(--region); border-radius: 10px; }
 .fig-no { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--region); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: .95rem; }
 .fig-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

@@ -355,6 +355,7 @@
           '<div class="kpis">' + METRICS.map(x => '<div class="kpi"><span>' + x.label + ' 합계</span><b>' + num(sum(x.key)) + '</b><em>' + x.unit + '</em></div>').join('') + '</div>' +
           '<ul class="hbars">' + rows.slice().sort((a, b) => b[m.key] - a[m.key]).map(r =>
             '<li><span class="hb-label">' + esc(r.office) + '</span><span class="hb-track"><i style="width:' + (r[m.key] / max * 100).toFixed(1) + '%"></i></span><b>' + num(r[m.key]) + '<small> ' + m.unit + '</small></b></li>').join('') + '</ul>' +
+          (st.real ? OB.regionTraits.cityChart(OB.regionData) : '') +
           extras(st, m) +
           '<div class="table-wrap"><table class="tbl small-tbl"><thead><tr><th>' + st.unitLabel + '</th>' + METRICS.map(x => '<th class="num">' + x.label + ' (' + x.unit + ')</th>').join('') + '</tr></thead><tbody>' +
             rows.map(r => '<tr><td>' + esc(r.office) + '</td>' + METRICS.map(x => '<td class="num">' + num(r[x.key]) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>' +

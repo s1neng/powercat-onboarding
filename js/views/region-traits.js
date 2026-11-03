@@ -169,13 +169,26 @@
     return '<span class="sent">' + first + '</span>' + facts + picks[0].say[picks[0].lv].split(/(?<=요\.)\s+/).map(s => '<span class="sent">' + esc(s) + '</span>').join('');
   }
 
+  // 본부 시군별 산점도: 2번 기능(본부 시군구별 전력사용량)에 들어간다
+  function cityChart(R) {
+    if (!valid(R)) return '';
+    const me = short(R.metro), cn = cityNote(R);
+    return '<div class="sc-grid2 one"><figure><figcaption class="fig-cap"><span class="fig-txt"><strong>' + esc(me) + ' 시군별 고객호수와 전력사용량</strong><small>점선 = ' + esc(me) + ' 평균 고객 1호당 사용량 (월 ' + num(cn.avg, 0) + ' kWh) · 위는 평균보다 많이, 아래는 적게 써요</small></span></figcaption>' +
+          scatter(R.cities.map(c => ({ name: c.city, x: c.custCnt, y: c.powerUsage, hl: false })),
+            { yDiv: 1e6, yLabel: '전력사용량 (GWh, 로그 척도)', refPerCust: cn.avg, refLabel: me + ' 평균 호당 사용량', aria: me + ' 시군 고객호수 대비 전력사용량 산점도' }) +
+          '<ul class="city-notes">' +
+            // 1일차 실습2(전력을 많이 쓰는 동네는 어떤 동네인가?)의 해석을 그대로 적용
+            (cn.above.length ? '<li><b>산업형 (점선 위)</b><span>' + cn.above.map(c => esc(c.city) + ' ' + num(perCust(c), 0)).join(' · ') + ' kWh/호.<br>산업용 비중이 ' + cn.indRange(cn.above) + '%인 곳이에요.<br>공장 계약 한 건이 가정 수백 곳만큼 쓰기 때문에 호당 사용량이 커져요.</span></li>' : '') +
+            (cn.below.length ? '<li><b>생활·농촌형 (점선 아래)</b><span>' + cn.below.map(c => esc(c.city) + ' ' + num(perCust(c), 0)).join(' · ') + ' kWh/호.<br>주택·농사용처럼 한 건당 사용량이 작은 계약이 많은 곳이에요.</span></li>' : '') +
+        '</ul></figure></div>';
+  }
+
   // footer: 카드 맨 아래에 붙일 HTML (예: 확인 버튼)
   function render(R, footer) {
     if (!valid(R)) return '';
     const t = traits(R);
     const me = short(R.metro), [y, mo] = R.latest.split('-');
     const hq = R.hq || me;
-    const cn = cityNote(R);
     const LV = { high: '전국 상위', mid: '전국 평균권', low: '전국 하위' };
 
     return '<article class="card span12 traits">' +
@@ -185,21 +198,13 @@
         '<span class="tr-cmp">전국 ' + esc(x.fmt(x.nat)) + ' · <em>' + x.rank + '/' + x.n + '위</em> <span class="tr-lv">' + LV[x.lv] + '</span></span>' +
         '<p>' + esc(x.say[x.lv]) + '</p></div>').join('') + '</div>' +
       '<div class="sc-grid2">' +
-        '<figure><figcaption class="fig-cap"><span class="fig-no">1</span><span class="fig-txt"><strong>전국 ' + R.metros.length + '개 시·도 속 ' + esc(me) + '의 위치</strong><small class="fig-legend"><i class="lg-dot gray"></i>회색 : 다른 시·도 / <i class="lg-dot orange"></i>주황 : ' + esc(hq) + ' / <i class="lg-bar"></i>세로 막대 : 전국평균</small></span></figcaption>' +
+        '<figure><figcaption class="fig-cap"><span class="fig-txt"><strong>전국 ' + R.metros.length + '개 시·도 속 ' + esc(me) + '의 위치</strong><small class="fig-legend"><i class="lg-dot gray"></i>회색 : 다른 시·도 / <i class="lg-dot orange"></i>주황 : ' + esc(hq) + ' / <i class="lg-bar"></i>세로 막대 : 전국평균</small></span></figcaption>' +
           dotplot(R, t, hq) + '</figure>' +
-        '<figure><figcaption class="fig-cap"><span class="fig-no">2</span><span class="fig-txt"><strong>' + esc(me) + ' 시군별 고객호수와 전력사용량</strong><small>점선 = ' + esc(me) + ' 평균 고객 1호당 사용량 (월 ' + num(cn.avg, 0) + ' kWh) · 위는 평균보다 많이, 아래는 적게 써요</small></span></figcaption>' +
-          scatter(R.cities.map(c => ({ name: c.city, x: c.custCnt, y: c.powerUsage, hl: false })),
-            { yDiv: 1e6, yLabel: '전력사용량 (GWh, 로그 척도)', refPerCust: cn.avg, refLabel: me + ' 평균 호당 사용량', aria: me + ' 시군 고객호수 대비 전력사용량 산점도' }) +
-          '<ul class="city-notes">' +
-            // 1일차 실습2(전력을 많이 쓰는 동네는 어떤 동네인가?)의 해석을 그대로 적용
-            (cn.above.length ? '<li><b>산업형 (점선 위)</b><span>' + cn.above.map(c => esc(c.city) + ' ' + num(perCust(c), 0)).join(' · ') + ' kWh/호.<br>산업용 비중이 ' + cn.indRange(cn.above) + '%인 곳이에요.<br>공장 계약 한 건이 가정 수백 곳만큼 쓰기 때문에 호당 사용량이 커져요.</span></li>' : '') +
-            (cn.below.length ? '<li><b>생활·농촌형 (점선 아래)</b><span>' + cn.below.map(c => esc(c.city) + ' ' + num(perCust(c), 0)).join(' · ') + ' kWh/호.<br>주택·농사용처럼 한 건당 사용량이 작은 계약이 많은 곳이에요.</span></li>' : '') +
-          '</ul></figure>' +
       '</div>' +
       '<p class="small muted">자료: ' + esc(R.source) + ' · 고객호수는 계약 호수 기준</p>' +
       (footer || '') +
       '</article>';
   }
 
-  OB.regionTraits = { render, traits, lead, short };
+  OB.regionTraits = { render, cityChart, traits, lead, short };
 })();
